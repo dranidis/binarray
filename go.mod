@@ -1,3 +1,3 @@
-module github.com/dranidis/binarray
+module github.com/dranidis/bitarray
 
 go 1.16

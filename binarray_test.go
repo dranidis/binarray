@@ -1,4 +1,4 @@
-package binarray
+package bitarray
 
 import (
 	"testing"

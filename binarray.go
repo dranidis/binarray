@@ -1,4 +1,4 @@
-package binarray
+package bitarray
 
 import (
 	"fmt"
@@ -57,7 +57,7 @@ func (b *BinArray) Size() int {
 	return b.size
 }
 
-// Clone creates a copy of the original bin matrix.
+// Clone creates a copy of the original bin array.
 // It does not change the receiver.
 func (b *BinArray) Clone() *BinArray {
 	var clone = newBinArray(b.size)
@@ -75,13 +75,13 @@ func (b *BinArray) None() *BinArray {
 	return b
 }
 
-// All returns a bit matrix with all bits set to 1.
+// All returns a bit array with all bits set to 1.
 // It does not change the receiver.
 func (b *BinArray) All() *BinArray {
 	return cachedAllValues[b.size].Clone()
 }
 
-// Count returns the number of 1 bits in the matrix.
+// Count returns the number of 1 bits in the array.
 // It does not change the receiver.
 func (b *BinArray) Count() int {
 	count := 0
@@ -91,21 +91,21 @@ func (b *BinArray) Count() int {
 	return count
 }
 
-// Set changes the pos bit to 1 and returns the matrix.
+// Set changes the pos bit to 1 and returns the array.
 func (b *BinArray) Set(pos int) *BinArray {
 	index, position := indexPos(pos)
 	b.blocks[index] |= 1 << position
 	return b
 }
 
-// Get returns the pos value of the bin matrix.
+// Get returns the pos value of the bin array.
 // It does not change the receiver.
 func (b *BinArray) Get(pos int) uint64 {
 	index, position := indexPos(pos)
 	return (b.blocks[index] & (1 << position)) >> position
 }
 
-// Is checks if the pos bit of the bin matrix is 1.
+// Is checks if the pos bit of the bin array is 1.
 // It does not change the receiver.
 func (b *BinArray) Is(pos int) bool {
 	return b.Get(pos) == 1
