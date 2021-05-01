@@ -12,6 +12,18 @@ func TestBitArray_AllSetCount(t *testing.T) {
 	}
 }
 
+func TestBitArray_None(t *testing.T) {
+	b := New(19 * 19)
+	b.Inverse()
+
+	b.None()
+	for i := 0; i < b.Size(); i++ {
+		if b.Is(i) {
+			t.Errorf("%d pos should not be 1", i)
+		}
+	}
+}
+
 func TestBitArray_CachedAll(t *testing.T) {
 	b1 := New(81)
 	count1 := b1.All().Count()
@@ -90,4 +102,114 @@ func TestBitArray_Equal(t *testing.T) {
 		t.Errorf("Should be equal \n%v \n%v", b, all)
 	}
 
+}
+
+func TestBitArray_DeMorgansLaw(t *testing.T) {
+	size := 514
+	a := New(size)
+	b := New(size)
+	leftSide := a.Clone().Or(b).Inverse()
+	rightSide := a.Clone().Inverse().And(b.Clone().Inverse())
+
+	if !leftSide.Equal(rightSide) {
+		t.Errorf("should be equal")
+	}
+}
+
+func TestBitArray_XorGate(t *testing.T) {
+	size := 851
+	a := New(size)
+	b := New(size)
+	xor := a.Clone().Or(b).And(a.Clone().Inverse().Or(a.Clone().Inverse().Or(b.Clone().Inverse())))
+
+	if !xor.Equal(a.Xor(b)) {
+		t.Errorf("should be equal")
+	}
+}
+
+func TestBitArray_Minus(t *testing.T) {
+	size := 851
+	a := New(size)
+	b := New(size)
+	minus := a.Clone().And(b.Inverse())
+	if !minus.Equal(a.Minus(b)) {
+		t.Errorf("should be equal")
+	}
+}
+
+func TestBitArray_SetPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+
+	size := 12
+	a := New(size)
+	a.Set(12)
+}
+
+func TestBitArray_GetPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+
+	size := 12
+	a := New(size)
+	a.Get(12)
+}
+
+func TestBitArray_ShifLeftPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+
+	size := 128
+	a := New(size)
+	a.ShiftLeft(65)
+}
+
+func TestBitArray_ShifRightPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+
+	size := 128
+	a := New(size)
+	a.ShiftRight(65)
+}
+
+func TestBitArray_String(t *testing.T) {
+	size := 65
+	a := New(size).Inverse().String()
+	s :=
+		"1111111111111111111111111111111111111111111111111111111111111111\n" +
+			"0000000000000000000000000000000000000000000000000000000000000001\n"
+	if a != s {
+		t.Errorf("%s", a)
+	}
+}
+
+func TestBitArray_NotEqualSize(t *testing.T) {
+	a := New(2)
+	b := New(1)
+
+	if a.Equal(b) {
+		t.Errorf("Should not be equal. Have different size")
+	}
+}
+
+func TestBitArray_NotEqual(t *testing.T) {
+	a := New(2).Set(1)
+	b := New(2)
+
+	if a.Equal(b) {
+		t.Errorf("Should not be equal")
+	}
 }

@@ -48,6 +48,9 @@ func allValueFor(size int) *BitArray {
 
 // Equal is a deep equality comparison.
 func (b *BitArray) Equal(w *BitArray) bool {
+	if b.Size() != w.Size() {
+		return false
+	}
 	b.zeroTheRemainder()
 	w.zeroTheRemainder()
 	for i := range b.blocks {
@@ -101,7 +104,7 @@ func (b *BitArray) Count() int {
 // Set changes the pos bit to 1 and returns the array.
 func (b *BitArray) Set(index int) *BitArray {
 	if index >= b.size {
-		log.Fatal(fmt.Sprintf("BitArray.Set: index out of range: %d", b.size))
+		log.Panic(fmt.Sprintf("BitArray.Set: index out of range: %d", b.size))
 	}
 	blockIndex, position := indexPos(index)
 	b.blocks[blockIndex] |= 1 << position
@@ -112,7 +115,7 @@ func (b *BitArray) Set(index int) *BitArray {
 // It does not change the receiver.
 func (b *BitArray) Get(index int) uint64 {
 	if index >= b.size {
-		log.Fatal(fmt.Sprintf("BitArray.Get: index out of range: %d", b.size))
+		log.Panic(fmt.Sprintf("BitArray.Get: index out of range: %d", b.size))
 	}
 	blockIndex, position := indexPos(index)
 	return (b.blocks[blockIndex] & (1 << position)) >> position
@@ -174,7 +177,7 @@ func (b *BitArray) Minus(w *BitArray) *BitArray {
 // The parameter times cannot be greater than 64.
 func (b *BitArray) ShiftLeft(times int) *BitArray {
 	if times > INTSIZE {
-		log.Fatal("ShiftLeft not implemented for greater than 64")
+		log.Panic("ShiftLeft not implemented for greater than 64")
 	}
 	for i := 0; i < len(b.blocks)-1; i++ {
 		tmp := b.blocks[i] >> (INTSIZE - times)
@@ -189,7 +192,7 @@ func (b *BitArray) ShiftLeft(times int) *BitArray {
 // The parameter times cannot be greater than 64.
 func (b *BitArray) ShiftRight(times int) *BitArray {
 	if times > INTSIZE {
-		log.Fatal("ShiftRight not implemented for greater than 64")
+		log.Panic("ShiftRight not implemented for greater than 64")
 	}
 	for i := 0; i < len(b.blocks)-1; i++ {
 		tmp := b.blocks[i+1] << (INTSIZE - times)
@@ -203,6 +206,7 @@ func (b *BitArray) ShiftRight(times int) *BitArray {
 // String returns a string of all bits
 // organized in 64 bits
 func (b *BitArray) String() string {
+	b.zeroTheRemainder()
 	str := ""
 	for i := range b.blocks {
 		str += fmt.Sprintf("%064b\n", b.blocks[i])
