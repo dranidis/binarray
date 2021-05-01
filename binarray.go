@@ -8,144 +8,199 @@ import (
 
 type BinArray struct {
 	size   int
-	board1 uint64 // holds first max 64 bits
-	board2 uint64 // holds the rest of the bits
+	blocks []uint64
 }
 
-var allMap map[int]*BinArray
+// NewBinArray returns a *BinArray possible to hold num bits.
+func NewBinArray(num int) *BinArray {
+	b := newBinArray(num)
+	if cachedAllValues == nil {
+		cachedAllValues = make(map[int]*BinArray)
+	}
+	_, ok := cachedAllValues[num]
+	if !ok {
+		cachedAllValues[num] = allValueFor(num)
+	}
+	return b
+}
 
-func initAll(num int) *BinArray {
-	all := BinArray{num, 0, 0}
+func newBinArray(num int) *BinArray {
+	var b BinArray
+	b.size = num
+	numBlocks := b.size/64 + 1
+	b.blocks = make([]uint64, numBlocks)
+	return &b
+}
+
+var cachedAllValues map[int]*BinArray
+
+func allValueFor(num int) *BinArray {
+	all := newBinArray(num)
 	for pos := 0; pos < num; pos++ {
 		all.Set(pos)
 	}
-	return &all
+	return all
 }
 
-func NewBinArray(num int) (*BinArray, error) {
-	if num > 128 {
-		return nil, fmt.Errorf("Size is not supported: %d", num)
-	}
-	var b BinArray
-	b.board1 = 0
-	b.board2 = 0
-	b.size = num
-	if allMap == nil {
-		allMap = make(map[int]*BinArray)
-	}
-	_, ok := allMap[num]
-	if !ok {
-		allMap[num] = initAll(num)
-	}
-	return &b, nil
-}
-
+// Equal is a deep equality comparison.
 func (b *BinArray) Equal(w *BinArray) bool {
-	return b.board1 == w.board1 && b.board2 == w.board2
+	for i := range b.blocks {
+		if b.blocks[i] != w.blocks[i] {
+			return false
+		}
+	}
+	return true
 }
 
+// Size returns the total number of bits.
 func (b *BinArray) Size() int {
 	return b.size
 }
 
+// Clone creates a copy of the original bin matrix.
+// It does not change the receiver.
 func (b *BinArray) Clone() *BinArray {
-	var clone, _ = NewBinArray(b.size)
-	clone.board1 = b.board1
-	clone.board2 = b.board2
+	var clone = newBinArray(b.size)
+	for i := range b.blocks {
+		clone.blocks[i] = b.blocks[i]
+	}
 	return clone
 }
 
+// None sets all bits to 0.
 func (b *BinArray) None() *BinArray {
-	b.board1 = 0
-	b.board2 = 0
+	for i := range b.blocks {
+		b.blocks[i] = 0
+	}
 	return b
 }
 
+// All returns a bit matrix with all bits set to 1.
+// It does not change the receiver.
 func (b *BinArray) All() *BinArray {
-	return allMap[b.size].Clone()
+	return cachedAllValues[b.size].Clone()
 }
 
+// Count returns the number of 1 bits in the matrix.
+// It does not change the receiver.
 func (b *BinArray) Count() int {
-	return bits.OnesCount64(b.board1) + bits.OnesCount64(b.board2)
+	count := 0
+	for i := range b.blocks {
+		count += bits.OnesCount64(b.blocks[i])
+	}
+	return count
 }
 
+// Set changes the pos bit to 1 and returns the matrix.
 func (b *BinArray) Set(pos int) *BinArray {
-	if pos < 64 {
-		b.board1 = b.board1 | (1 << pos)
-	} else {
-		b.board2 = b.board2 | (1 << (pos - 64))
-	}
+	index, position := indexPos(pos)
+	b.blocks[index] |= 1 << position
 	return b
 }
 
+// Get returns the pos value of the bin matrix.
+// It does not change the receiver.
 func (b *BinArray) Get(pos int) uint64 {
-	if pos < 64 {
-		return (b.board1 & (1 << pos)) >> pos
-	} else {
-		pos -= 64
-		return (b.board2 & (1 << pos)) >> pos
-	}
+	index, position := indexPos(pos)
+	return (b.blocks[index] & (1 << position)) >> position
 }
 
+// Is checks if the pos bit of the bin matrix is 1.
+// It does not change the receiver.
 func (b *BinArray) Is(pos int) bool {
 	return b.Get(pos) == 1
 }
 
-// boolean operators work on all bits.
-// Also on the ones outside the board area
+// And performs the and boolean operator on all bits.
+// Also on the ones outside the size area.
 func (b *BinArray) And(w *BinArray) *BinArray {
-	b.board1 = b.board1 & w.board1
-	b.board2 = b.board2 & w.board2
+	for i := range b.blocks {
+		b.blocks[i] &= w.blocks[i]
+	}
 	return b
 }
 
+// Or performs the or boolean operator on all bits.
+// Also on the ones outside the size area.
 func (b *BinArray) Or(w *BinArray) *BinArray {
-	b.board1 = b.board1 | w.board1
-	b.board2 = b.board2 | w.board2
+	for i := range b.blocks {
+		b.blocks[i] |= w.blocks[i]
+	}
 	return b
 }
 
+// Xor performs the xor boolean operator on all bits.
+// Also on the ones outside the size area.
 func (b *BinArray) Xor(w *BinArray) *BinArray {
-	b.board1 = b.board1 ^ w.board1
-	b.board2 = b.board2 ^ w.board2
+	for i := range b.blocks {
+		b.blocks[i] ^= w.blocks[i]
+	}
 	return b
 }
 
+// Inverse inverses all bits.
+// Also the ones outside the size area.
 func (b *BinArray) Inverse() *BinArray {
-	b.board1 = ^b.board1
-	b.board2 = ^b.board2
+	for i := range b.blocks {
+		b.blocks[i] = ^b.blocks[i]
+	}
 	return b
 }
 
+// Minus performs the minus boolean operator on all bits.
+// Also on the ones outside the size area.
 func (b *BinArray) Minus(w *BinArray) *BinArray {
-	b.board1 = b.board1 & ^w.board1
-	b.board2 = b.board2 & ^w.board2
+	for i := range b.blocks {
+		b.blocks[i] = b.blocks[i] & ^w.blocks[i]
+	}
 	return b
 }
 
-// shifting
+// ShiftLeft shifts all bits times to the left.
+// The parameter times cannot be greater than 64.
 func (b *BinArray) ShiftLeft(times int) *BinArray {
 	if times > 64 {
 		log.Fatal("ShiftLeft not implemented for greater than 64")
 	}
-	num := b.board1 >> (64 - times)
-	b.board1 = b.board1 << times
-	b.board2 = b.board2 << times
-	b.board2 = b.board2 | num
+	for i := 0; i < len(b.blocks)-1; i++ {
+		tmp := b.blocks[i] >> (64 - times)
+		b.blocks[i] <<= times
+		b.blocks[i+1] <<= times
+		b.blocks[i+1] |= tmp
+	}
 	return b
 }
 
+// ShiftLeft shifts all bits times to the right.
+// The parameter times cannot be greater than 64.
 func (b *BinArray) ShiftRight(times int) *BinArray {
 	if times > 64 {
 		log.Fatal("ShiftRight not implemented for greater than 64")
 	}
-	num := b.board2 << (64 - times)
-	b.board1 = b.board1 >> times
-	b.board2 = b.board2 >> times
-	b.board1 = b.board1 | num
+	for i := 0; i < len(b.blocks)-1; i++ {
+		tmp := b.blocks[i+1] << (64 - times)
+		b.blocks[i] >>= times
+		b.blocks[i+1] >>= times
+		b.blocks[i] |= tmp
+	}
 	return b
 }
 
+// String returns a string of all bits
+// organized in 64 bits
 func (b *BinArray) String() string {
-	return fmt.Sprintf("%064b\n%064b\n", b.board1, b.board2)
+	str := ""
+	for i := range b.blocks {
+		str += fmt.Sprintf("%064b\n", b.blocks[i])
+	}
+	return str
+}
+
+// indexPos is a helper function that returns
+// the index of the blocks and the position within the block
+// corresponding to the pos argument.
+func indexPos(pos int) (int, int) {
+	index := pos / 64
+	position := pos - index*64
+	return index, position
 }
