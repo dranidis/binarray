@@ -6,44 +6,50 @@ import (
 	"math/bits"
 )
 
-type BinArray struct {
+type BitArray struct {
 	size   int
 	blocks []uint64
 }
 
-// NewBinArray returns a *BinArray possible to hold num bits.
-func NewBinArray(num int) *BinArray {
-	b := newBinArray(num)
+const (
+	INTSIZE = 64
+)
+
+// New returns a *BitArray with the provided size.
+func New(size int) *BitArray {
+	b := newBitArray(size)
 	if cachedAllValues == nil {
-		cachedAllValues = make(map[int]*BinArray)
+		cachedAllValues = make(map[int]*BitArray)
 	}
-	_, ok := cachedAllValues[num]
+	_, ok := cachedAllValues[size]
 	if !ok {
-		cachedAllValues[num] = allValueFor(num)
+		cachedAllValues[size] = allValueFor(size)
 	}
 	return b
 }
 
-func newBinArray(num int) *BinArray {
-	var b BinArray
-	b.size = num
-	numBlocks := b.size/64 + 1
+func newBitArray(size int) *BitArray {
+	var b BitArray
+	b.size = size
+	numBlocks := b.size/INTSIZE + 1
 	b.blocks = make([]uint64, numBlocks)
 	return &b
 }
 
-var cachedAllValues map[int]*BinArray
+var cachedAllValues map[int]*BitArray
 
-func allValueFor(num int) *BinArray {
-	all := newBinArray(num)
-	for pos := 0; pos < num; pos++ {
-		all.Set(pos)
+func allValueFor(size int) *BitArray {
+	all := newBitArray(size)
+	for index := 0; index < size; index++ {
+		all.Set(index)
 	}
 	return all
 }
 
 // Equal is a deep equality comparison.
-func (b *BinArray) Equal(w *BinArray) bool {
+func (b *BitArray) Equal(w *BitArray) bool {
+	b.zeroTheRemainder()
+	w.zeroTheRemainder()
 	for i := range b.blocks {
 		if b.blocks[i] != w.blocks[i] {
 			return false
@@ -52,15 +58,15 @@ func (b *BinArray) Equal(w *BinArray) bool {
 	return true
 }
 
-// Size returns the total number of bits.
-func (b *BinArray) Size() int {
+// Size returns the size of the bit array.
+func (b *BitArray) Size() int {
 	return b.size
 }
 
-// Clone creates a copy of the original bin array.
+// Clone creates a copy of the original bit array.
 // It does not change the receiver.
-func (b *BinArray) Clone() *BinArray {
-	var clone = newBinArray(b.size)
+func (b *BitArray) Clone() *BitArray {
+	var clone = newBitArray(b.size)
 	for i := range b.blocks {
 		clone.blocks[i] = b.blocks[i]
 	}
@@ -68,7 +74,7 @@ func (b *BinArray) Clone() *BinArray {
 }
 
 // None sets all bits to 0.
-func (b *BinArray) None() *BinArray {
+func (b *BitArray) None() *BitArray {
 	for i := range b.blocks {
 		b.blocks[i] = 0
 	}
@@ -77,13 +83,14 @@ func (b *BinArray) None() *BinArray {
 
 // All returns a bit array with all bits set to 1.
 // It does not change the receiver.
-func (b *BinArray) All() *BinArray {
+func (b *BitArray) All() *BitArray {
 	return cachedAllValues[b.size].Clone()
 }
 
 // Count returns the number of 1 bits in the array.
-// It does not change the receiver.
-func (b *BinArray) Count() int {
+// It sets all the bits outside the size to 0.
+func (b *BitArray) Count() int {
+	b.zeroTheRemainder()
 	count := 0
 	for i := range b.blocks {
 		count += bits.OnesCount64(b.blocks[i])
@@ -92,28 +99,34 @@ func (b *BinArray) Count() int {
 }
 
 // Set changes the pos bit to 1 and returns the array.
-func (b *BinArray) Set(pos int) *BinArray {
-	index, position := indexPos(pos)
-	b.blocks[index] |= 1 << position
+func (b *BitArray) Set(index int) *BitArray {
+	if index >= b.size {
+		log.Fatal(fmt.Sprintf("BitArray.Set: index out of range: %d", b.size))
+	}
+	blockIndex, position := indexPos(index)
+	b.blocks[blockIndex] |= 1 << position
 	return b
 }
 
-// Get returns the pos value of the bin array.
+// Get returns the pos value of the bit array.
 // It does not change the receiver.
-func (b *BinArray) Get(pos int) uint64 {
-	index, position := indexPos(pos)
-	return (b.blocks[index] & (1 << position)) >> position
+func (b *BitArray) Get(index int) uint64 {
+	if index >= b.size {
+		log.Fatal(fmt.Sprintf("BitArray.Get: index out of range: %d", b.size))
+	}
+	blockIndex, position := indexPos(index)
+	return (b.blocks[blockIndex] & (1 << position)) >> position
 }
 
-// Is checks if the pos bit of the bin array is 1.
+// Is checks if the pos bit of the bit array is 1.
 // It does not change the receiver.
-func (b *BinArray) Is(pos int) bool {
+func (b *BitArray) Is(pos int) bool {
 	return b.Get(pos) == 1
 }
 
 // And performs the and boolean operator on all bits.
 // Also on the ones outside the size area.
-func (b *BinArray) And(w *BinArray) *BinArray {
+func (b *BitArray) And(w *BitArray) *BitArray {
 	for i := range b.blocks {
 		b.blocks[i] &= w.blocks[i]
 	}
@@ -122,7 +135,7 @@ func (b *BinArray) And(w *BinArray) *BinArray {
 
 // Or performs the or boolean operator on all bits.
 // Also on the ones outside the size area.
-func (b *BinArray) Or(w *BinArray) *BinArray {
+func (b *BitArray) Or(w *BitArray) *BitArray {
 	for i := range b.blocks {
 		b.blocks[i] |= w.blocks[i]
 	}
@@ -131,7 +144,7 @@ func (b *BinArray) Or(w *BinArray) *BinArray {
 
 // Xor performs the xor boolean operator on all bits.
 // Also on the ones outside the size area.
-func (b *BinArray) Xor(w *BinArray) *BinArray {
+func (b *BitArray) Xor(w *BitArray) *BitArray {
 	for i := range b.blocks {
 		b.blocks[i] ^= w.blocks[i]
 	}
@@ -140,8 +153,9 @@ func (b *BinArray) Xor(w *BinArray) *BinArray {
 
 // Inverse inverses all bits.
 // Also the ones outside the size area.
-func (b *BinArray) Inverse() *BinArray {
-	for i := range b.blocks {
+func (b *BitArray) Inverse() *BitArray {
+	numBLocks := len(b.blocks)
+	for i := 0; i < numBLocks; i++ {
 		b.blocks[i] = ^b.blocks[i]
 	}
 	return b
@@ -149,7 +163,7 @@ func (b *BinArray) Inverse() *BinArray {
 
 // Minus performs the minus boolean operator on all bits.
 // Also on the ones outside the size area.
-func (b *BinArray) Minus(w *BinArray) *BinArray {
+func (b *BitArray) Minus(w *BitArray) *BitArray {
 	for i := range b.blocks {
 		b.blocks[i] = b.blocks[i] & ^w.blocks[i]
 	}
@@ -158,12 +172,12 @@ func (b *BinArray) Minus(w *BinArray) *BinArray {
 
 // ShiftLeft shifts all bits times to the left.
 // The parameter times cannot be greater than 64.
-func (b *BinArray) ShiftLeft(times int) *BinArray {
-	if times > 64 {
+func (b *BitArray) ShiftLeft(times int) *BitArray {
+	if times > INTSIZE {
 		log.Fatal("ShiftLeft not implemented for greater than 64")
 	}
 	for i := 0; i < len(b.blocks)-1; i++ {
-		tmp := b.blocks[i] >> (64 - times)
+		tmp := b.blocks[i] >> (INTSIZE - times)
 		b.blocks[i] <<= times
 		b.blocks[i+1] <<= times
 		b.blocks[i+1] |= tmp
@@ -173,12 +187,12 @@ func (b *BinArray) ShiftLeft(times int) *BinArray {
 
 // ShiftLeft shifts all bits times to the right.
 // The parameter times cannot be greater than 64.
-func (b *BinArray) ShiftRight(times int) *BinArray {
-	if times > 64 {
+func (b *BitArray) ShiftRight(times int) *BitArray {
+	if times > INTSIZE {
 		log.Fatal("ShiftRight not implemented for greater than 64")
 	}
 	for i := 0; i < len(b.blocks)-1; i++ {
-		tmp := b.blocks[i+1] << (64 - times)
+		tmp := b.blocks[i+1] << (INTSIZE - times)
 		b.blocks[i] >>= times
 		b.blocks[i+1] >>= times
 		b.blocks[i] |= tmp
@@ -188,7 +202,7 @@ func (b *BinArray) ShiftRight(times int) *BinArray {
 
 // String returns a string of all bits
 // organized in 64 bits
-func (b *BinArray) String() string {
+func (b *BitArray) String() string {
 	str := ""
 	for i := range b.blocks {
 		str += fmt.Sprintf("%064b\n", b.blocks[i])
@@ -200,7 +214,12 @@ func (b *BinArray) String() string {
 // the index of the blocks and the position within the block
 // corresponding to the pos argument.
 func indexPos(pos int) (int, int) {
-	index := pos / 64
-	position := pos - index*64
+	index := pos / INTSIZE
+	position := pos - index*INTSIZE
 	return index, position
+}
+
+func (b *BitArray) zeroTheRemainder() {
+	numBLocks := len(b.blocks)
+	b.blocks[numBLocks-1] &= cachedAllValues[b.size].blocks[numBLocks-1]
 }
