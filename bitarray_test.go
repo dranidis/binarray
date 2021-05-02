@@ -1,6 +1,7 @@
 package bitarray
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -80,19 +81,45 @@ func TestBitArray_InverseInversesAllBits(t *testing.T) {
 
 func TestBitArray_ShiftLeftRightCancel(t *testing.T) {
 	b := New(81)
-	positions := []int{43, 61, 63, 64, 65, 80}
-	for pos := 0; pos < len(positions); pos++ {
+	shiftTimes := 9
+	positions := []int{0, 43, 61, 63, 64, 65}
+	for _, pos := range positions {
 		b.Set(pos)
 	}
-	b.ShiftLeft(12)
-	for pos := 0; pos < len(positions); pos++ {
-		if !b.Is(pos + 12) {
-			t.Errorf("Error in position: %d", pos+12)
+	b.ShiftLeft(shiftTimes)
+	for _, pos := range positions {
+		if !b.Is(pos + shiftTimes) {
+			t.Errorf("Error in position: %d", pos+shiftTimes)
 		}
 	}
 
-	b.ShiftRight(12)
-	for pos := 0; pos < len(positions); pos++ {
+	b.ShiftRight(shiftTimes)
+	for _, pos := range positions {
+		if !b.Is(pos) {
+			t.Errorf("Error in position: %d", pos)
+		}
+	}
+}
+
+func TestBitArray_ShiftRightLeftCancel(t *testing.T) {
+	b := New(81)
+	shiftTimes := 9
+	positions := []int{43, 61, 63, 64, 65, 80}
+	for _, pos := range positions {
+		b.Set(pos)
+	}
+	fmt.Printf("Before \n%v\n", b)
+	b.ShiftRight(shiftTimes)
+	fmt.Printf("Right \n%v\n", b)
+	for _, pos := range positions {
+		if !b.Is(pos - shiftTimes) {
+			t.Errorf("Error in position: %d", pos-shiftTimes)
+		}
+	}
+
+	b.ShiftLeft(shiftTimes)
+	fmt.Printf("Left \n%v\n", b)
+	for _, pos := range positions {
 		if !b.Is(pos) {
 			t.Errorf("Error in position: %d", pos)
 		}

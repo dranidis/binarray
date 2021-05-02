@@ -197,7 +197,7 @@ func (b *BitArray) ShiftRight(times int) *BitArray {
 	}
 	prevTmp := uint64(0)
 
-	for i := 0; i < len(b.blocks); i++ {
+	for i := len(b.blocks) - 1; i >= 0; i-- {
 		tmp := b.blocks[i] << (INTSIZE - times)
 		b.blocks[i] >>= times
 		b.blocks[i] |= prevTmp
@@ -213,6 +213,20 @@ func (b *BitArray) String() string {
 	str := ""
 	for i := range b.blocks {
 		str += fmt.Sprintf("%064b\n", b.blocks[i])
+	}
+	return str
+}
+
+// StringBreak returns a string of all bits inside the range
+// organized in breakLine number of bits
+func (b *BitArray) StringBreak(breakLine int) string {
+	b.zeroTheRemainder()
+	str := ""
+	for i := 0; i < b.size; i++ {
+		if i%breakLine == 0 {
+			str += "\n"
+		}
+		str += fmt.Sprintf(" %d", b.Get(i))
 	}
 	return str
 }
