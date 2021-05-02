@@ -82,13 +82,38 @@ func TestBitArray_ShiftLeftRightCancel(t *testing.T) {
 	b := New(81)
 	positions := []int{43, 61, 63, 64, 65, 80}
 	for pos := 0; pos < len(positions); pos++ {
-		b = b.Set(pos)
+		b.Set(pos)
 	}
-	b = b.ShiftLeft(12).ShiftRight(12)
+	b.ShiftLeft(12)
+	for pos := 0; pos < len(positions); pos++ {
+		if !b.Is(pos + 12) {
+			t.Errorf("Error in position: %d", pos+12)
+		}
+	}
+
+	b.ShiftRight(12)
 	for pos := 0; pos < len(positions); pos++ {
 		if !b.Is(pos) {
 			t.Errorf("Error in position: %d", pos)
 		}
+	}
+}
+
+func TestBitArray_ShiftLeft1(t *testing.T) {
+	actual := New(8).Set(0).ShiftLeft(1)
+	expected := New(8).Set(1)
+
+	if !expected.Equal(actual) {
+		t.Errorf("Expected %v got %v", expected, actual)
+	}
+}
+
+func TestBitArray_ShiftRight1(t *testing.T) {
+	actual := New(8).Set(1).ShiftRight(1)
+	expected := New(8).Set(0)
+
+	if !expected.Equal(actual) {
+		t.Errorf("Expected %v got %v", expected, actual)
 	}
 }
 

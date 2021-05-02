@@ -179,11 +179,12 @@ func (b *BitArray) ShiftLeft(times int) *BitArray {
 	if times > INTSIZE {
 		log.Panic("ShiftLeft not implemented for greater than 64")
 	}
-	for i := 0; i < len(b.blocks)-1; i++ {
+	prevTmp := uint64(0)
+	for i := 0; i < len(b.blocks); i++ {
 		tmp := b.blocks[i] >> (INTSIZE - times)
 		b.blocks[i] <<= times
-		b.blocks[i+1] <<= times
-		b.blocks[i+1] |= tmp
+		b.blocks[i] |= prevTmp
+		prevTmp = tmp
 	}
 	return b
 }
@@ -194,11 +195,13 @@ func (b *BitArray) ShiftRight(times int) *BitArray {
 	if times > INTSIZE {
 		log.Panic("ShiftRight not implemented for greater than 64")
 	}
-	for i := 0; i < len(b.blocks)-1; i++ {
-		tmp := b.blocks[i+1] << (INTSIZE - times)
+	prevTmp := uint64(0)
+
+	for i := 0; i < len(b.blocks); i++ {
+		tmp := b.blocks[i] << (INTSIZE - times)
 		b.blocks[i] >>= times
-		b.blocks[i+1] >>= times
-		b.blocks[i] |= tmp
+		b.blocks[i] |= prevTmp
+		prevTmp = tmp
 	}
 	return b
 }
